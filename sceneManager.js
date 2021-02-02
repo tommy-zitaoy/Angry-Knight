@@ -4,16 +4,8 @@ class SceneManager {
 		this.game.camera = this;
 		this.pos = { x: 0, y: 0 };
 
-		this.sprites = new Array(2);
-
 		this.currentLevel = 1;
 		this.map = level_1_map;
-
-		mapLevel1(game, this);
-
-		this.sprites[0] = null;
-		this.sprites[1] = 1;
-
 		this.loadTestLevel();
 	}
 
@@ -23,12 +15,15 @@ class SceneManager {
 
 		for (var i = 0; i < this.map[0].length; i++) {
 			for (var j = 0; j < this.map.length; j++) {
-				var sprite = this.sprites[this.map[j][i]];
-				//var currentLevel = this.currentLevel;
+				var sprite = this.map[j][i];
 				if (sprite) {
+					console.log("sprite: " + sprite);
 					if (sprite == 1) {
 						this.game.addEntity(new Ground(
-							this.game, i * PARAMS.TILE_WIDTH, j * PARAMS.TILE_WIDTH, 1));
+							this.game, i * PARAMS.TILE_WIDTH, j * PARAMS.TILE_WIDTH, false));
+					} else if (sprite == 2) {
+						this.game.addEntity(new Ground(
+							this.game, i * PARAMS.TILE_WIDTH, j * PARAMS.TILE_WIDTH, true));
 					}
 				}
 			}

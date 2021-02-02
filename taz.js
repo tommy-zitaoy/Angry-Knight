@@ -35,8 +35,8 @@ class Taz extends Agent {
 						that.state = 2;
 					}
 					if (that.vel.x < 0 && (that.lastWorldBB.left) >= entity.worldBB.right
-						&& that.lastWorldBB.top != entity.worldBB.bottom
-						&& that.lastWorldBB.bottom != entity.worldBB.top) { // going left
+						&& that.lastWorldBB.top < entity.worldBB.bottom
+						&& that.lastWorldBB.bottom > entity.worldBB.top) { // going left
 						that.pos.x = entity.worldBB.right;
 						that.vel.x = 0;
 					}
@@ -45,6 +45,28 @@ class Taz extends Agent {
 						&& that.lastWorldBB.bottom > entity.worldBB.top) { // going right
 						that.pos.x = entity.worldBB.left - that.dim.x;
 						that.vel.x = 0;
+					}
+					// bottom corners to entity's top corners
+					if (that.vel.y > 0 && that.vel.x > 0 && that.lastWorldBB.bottom > entity.worldBB.top
+						&& that.lastWorldBB.right > entity.worldBB.left) {
+						that.pos.x = entity.worldBB.left - that.dim.x;
+						that.vel.x = 0;
+					}
+					if (that.vel.y > 0 && that.vel.x < 0 && that.lastWorldBB.bottom > entity.worldBB.top
+						&& that.lastWorldBB.left < entity.worldBB.right) {
+						that.pos.x = entity.worldBB.right;
+						that.vel.x = 0;
+					}
+					// top corners to entity's bottom corners
+					if (that.vel.y < 0 && that.vel.x > 0 && that.lastWorldBB.top < entity.worldBB.bottom
+						&& that.lastWorldBB.right > entity.worldBB.left) {
+						that.pos.y = entity.worldBB.bottom;
+						that.vel.y = 0;
+					}
+					if (that.vel.y < 0 && that.vel.x < 0 && that.lastWorldBB.top < entity.worldBB.bottom
+						&& that.lastWorldBB.left < entity.worldBB.right) {
+						that.pos.y = entity.worldBB.bottom;
+						that.vel.y = 0;
 					}
 				}
 			}
@@ -84,7 +106,7 @@ class Taz extends Agent {
 	update() {
 		const FALL_ACC = 1200;
 		const WALK_SPEED = 200;
-		const JUMP_VEL = 550;
+		const JUMP_VEL = 580;
 		const TICK = this.game.clockTick;
 
 		if (this.game.right) {
