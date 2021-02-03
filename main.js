@@ -1,7 +1,7 @@
 var GAME_ENGINE = new GameEngine();
 var ASSET_MANAGER = new AssetManager();
 
-ASSET_MANAGER.queueDownload("./sprites/idle1.png");
+ASSET_MANAGER.queueDownload("./sprites/idle.png");
 ASSET_MANAGER.queueDownload("./sprites/tileset.png");
 ASSET_MANAGER.queueDownload("./sprites/ground.png");
 ASSET_MANAGER.queueDownload("./sprites/grass-ground.png");
