@@ -5,11 +5,12 @@ class Taz extends Agent {
 		this.scale = 1;
 		this.game.taz = this;
 
-		this.state = 0;		// 0 is idle, 1 is running, 2 is jumping, 3 is falling, 4 is attacking
+		this.state = 0;		// 0 is idle, 1 is running, 2 is jumping, 3 is attacking
 		this.facing = 0;	// 0 is left 1 is right
 		this.animations = [];
 		this.loadAnimations();
-		this.isJumping = false;
+		this.attackCoolDown = 0;
+		//this.isAttacking
 	}
 
 	/** @override */
@@ -25,7 +26,7 @@ class Taz extends Agent {
 							&& (that.lastWorldBB.right) > entity.worldBB.left) { // falling dowm
 							that.pos.y = entity.worldBB.top - that.dim.y;
 							that.vel.y = 0;
-							that.isJumping = false;
+							if (that.state == 2) that.state = 0;
 						}
 						// for corner to corner collision
 						if (that.lastWorldBB.bottom > entity.worldBB.top) {
@@ -44,18 +45,17 @@ class Taz extends Agent {
 							&& (that.lastWorldBB.right) != entity.worldBB.left) { // jumping up
 							that.pos.y = entity.worldBB.bottom;
 							that.vel.y = 0;
-							that.isJumping = true;
 							that.state = 2;
 						}
 						// top corners to entity's bottom corners
 						if (that.vel.x > 0 && that.lastWorldBB.top < entity.worldBB.bottom
-								&& that.lastWorldBB.right > entity.worldBB.left) {
-							that.pos.y = entity.worldBB.left - that.dim.x;
-							that.vel.y = 0;
+							&& that.lastWorldBB.right > entity.worldBB.left) {
+							that.pos.x = entity.worldBB.left - that.dim.x;
+							that.vel.x = 0;
 						} else if (that.vel.x < 0 && that.lastWorldBB.top < entity.worldBB.bottom
-								&& that.lastWorldBB.left < entity.worldBB.right) {
-							that.pos.y = entity.worldBB.right;
-							that.vel.y = 0;
+							&& that.lastWorldBB.left < entity.worldBB.right) {
+							that.pos.x = entity.worldBB.right;
+							that.vel.x = 0;
 						}
 					}
 					if (that.vel.x < 0 && (that.lastWorldBB.left) >= entity.worldBB.right
@@ -102,6 +102,13 @@ class Taz extends Agent {
 			this.spritesheet_jump, 0, 0, 48, 48, 2, 0.1, 0, false, true, false);
 		this.animations[2][1] = new Animator(
 			this.spritesheet_jump, 0, 0, 48, 48, 2, 0.1, 0, false, true, true);
+
+		// jumping
+		this.spritesheet_attack = ASSET_MANAGER.getAsset("./sprites/attack.png");
+		this.animations[3][0] = new Animator(
+			this.spritesheet_attack, 0, 0, 128, 64, 15, 0.07, 0, false, true, true);
+		this.animations[3][1] = new Animator(
+			this.spritesheet_attack, 0, 0, 128, 64, 15, 0.07, 0, false, true, false);
 	}
 
 	/** @override */
@@ -111,31 +118,41 @@ class Taz extends Agent {
 		const JUMP_VEL = 580;
 		const TICK = this.game.clockTick;
 
-		if (this.game.right) {
+		this.attackCoolDown -= TICK;
+
+		if (this.game.right && this.state != 3) {
 			this.vel.x = WALK_SPEED;
-			if (this.isJumping == false) {
+			if (this.state != 2) {
 				this.state = 1;
 			}
-		} else if (this.game.left) {
+		} else if (this.game.left && this.state != 3) {
 			this.vel.x = -WALK_SPEED;
-			if (this.isJumping == false) {
+			if (this.state != 2) {
 				this.state = 1;
 			}
-		} else {
+		} else if (this.game.A && this.state != 2 && this.attackCoolDown <= 0) {
+			this.state = 3;
+			this.attackCoolDown = 1.05;
+			this.game.A = false;
 			this.vel.x = 0;
-			if (this.isJumping == false) {
+			if (this.facing == 0) { // left
+				this.game.addEntity(new MeleeAttack(this.game, this.pos.x + PARAMS.TILE_WIDTH, this.pos.y - PARAMS.TILE_WIDTH, this.facing));
+			} else { // right
+				this.game.addEntity(new MeleeAttack(this.game, this.pos.x - PARAMS.TILE_WIDTH, this.pos.y - PARAMS.TILE_WIDTH, this.facing));
+            }
+		} else if (this.attackCoolDown <= 0){
+			this.vel.x = 0;
+			if (this.state != 2) {
 				this.state = 0;
 			}
 		}
 
-		if (!this.isJumping && this.game.B) {
+		if (this.game.B && this.state != 2 && this.state != 3) {
 			this.vel.y = -JUMP_VEL;
 			this.game.B = false;
-			this.isJumping = true;
 			this.state = 2;
 		} else {
 			this.vel.y += FALL_ACC * TICK;
-			this.isJumping = true;
 		}
 
 		this.move(TICK);
@@ -143,8 +160,7 @@ class Taz extends Agent {
 
 	/** @override */
 	draw(context) {
-		console.log(this.state);
-		if (this.state == 0) {
+		if (this.state == 0 || this.state == 1) {
 			if (this.facing == 0) { // idle
 				this.animations[this.state][this.facing].drawFrame(this.game.clockTick,
 					context, this.pos.x, this.pos.y, this.scale, this.game.camera);
@@ -160,16 +176,96 @@ class Taz extends Agent {
 				this.animations[this.state][this.facing].drawFrame(this.game.clockTick,
 					context, this.pos.x - 16, this.pos.y - 12, this.scale, this.game.camera);
 			}
-        } else {
+		} else if (this.state == 3) { // attack
 			if (this.facing == 0) {
 				this.animations[this.state][this.facing].drawFrame(this.game.clockTick,
-					context, this.pos.x, this.pos.y, this.scale, this.game.camera);
+					context, this.pos.x - 64, this.pos.y - 32, this.scale, this.game.camera);
 			} else {
 				this.animations[this.state][this.facing].drawFrame(this.game.clockTick,
-					context, this.pos.x - PARAMS.TILE_WIDTH, this.pos.y, this.scale, this.game.camera);
+					context, this.pos.x - 32, this.pos.y - 32, this.scale, this.game.camera);
 			}
 		}
 		this.worldBB.display(this.game);
 		this.agentBB.display(this.game);
+	}
+}
+
+
+// for testing
+class MeleeAttack extends Agent{
+	constructor(game, x, y, direction) {
+		super(game, x, y);
+		this.setDimensions(32, 64);
+		this.worldBB = this.makeDefaultBoundingBox();
+		this.existTime = 0.7;
+		if (direction == 0) {
+			this.vel.x = -256;
+			this.MIN_X = x - PARAMS.TILE_WIDTH * 2;
+		} else {
+			this.vel.x = 256;
+			this.MAX_X = x + PARAMS.TILE_WIDTH * 2;
+        }
+	}
+
+	/** @override */
+	checkCollisions() {
+		let that = this;
+		this.game.entities.forEach(function (entity) {
+			if (entity.worldBB && that.worldBB.collide(entity.worldBB)
+				&& that !== entity) {
+				if (entity instanceof Golem) {
+					entity.removeFromWorld = true;
+				}
+			}
+		});
+	}
+
+	/** @override */
+	update() {
+		const TICK = this.game.clockTick;
+		this.existTime -= TICK;
+		if (this.existTime <= 0) {
+			this.removeFromWorld = true;
+		}
+		this.checkCollisions();
+		if (this.vel.x > 0 && this.pos.x >= this.MAX_X) this.vel.x = 0;
+		if (this.vel.x < 0 && this.pos.x <= this.MIN_X) this.vel.x = 0;
+		this.move(TICK);
+	}
+
+	/** @override */
+	draw() {
+		this.worldBB.display(this.game);
+		this.agentBB.display(this.game);
+	}
+
+}
+
+// for testing
+class Golem extends Entity {
+	constructor(game, x, y) {
+		super(game, x, y, "./sprites/ground.png");
+		//this.vel.x = PARAMS.TILE_WIDTH;
+		//this.vel.y = PARAMS.TILE_WIDTH;
+	}
+
+	/** @override */
+	draw(context) {
+		context.drawImage(this.spritesheet, 0, 0, 128, 128,
+			this.pos.x - this.game.camera.pos.x, this.pos.y - this.game.camera.pos.y,
+			this.dim.y, this.dim.y);
+		this.worldBB.display(this.game);
+	}
+
+	/** @override */
+	drawWorldBB(context) {
+		if (PARAMS.DEBUG) {
+			context.save();
+			context.strokeStyle = 'red';
+			context.lineWidth = PARAMS.BB_LINE_WIDTH;
+			context.strokeRect(
+				this.pos.x - this.game.camera.pos.x, this.pos.y - this.game.camera.pos.y, PARAMS.TILE_WIDTH, PARAMS.TILE_WIDTH);
+			context.restore();
+		}
 	}
 }
