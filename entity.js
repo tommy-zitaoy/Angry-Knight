@@ -77,8 +77,6 @@ class Agent extends Entity {
         this.vel = { x: 0, y: 0 };
         
         this.facing = 0; // Left = 0, Right = 1
-        this.agentBB = this.makeDefaultBoundingCircle();
-        this.lastAgentBB = this.agentBB;
         this.loadAnimations();
     }
 
@@ -121,7 +119,6 @@ class Agent extends Entity {
             this.pos.x, this.pos.y,
             this.scale, this.game.camera);
         this.worldBB.display(this.game);
-        this.agentBB.display(this.game);
     }
 
     /** 
@@ -132,13 +129,6 @@ class Agent extends Entity {
         console.log(
             "Collisions not defined for Agent at x="
             + this.pos.x + ", y=" + this.pos.y);
-    }
-
-    /** @override */
-    updateBB() {
-        super.updateBB();
-        this.lastAgentBB = this.agentBB;
-        this.agentBB = this.makeDefaultBoundingCircle();
     }
 
     /** @override */
@@ -191,43 +181,6 @@ class BoundingBox {
                 this.x - game.camera.pos.x,
                 this.y - game.camera.pos.y,
                 this.width, this.height);
-            game.context.restore();
-        }
-    }
-}
-
-/** Checks collisions between agents. */
-class BoundingCircle {
-    constructor(x, y, radius) {
-        Object.assign(this, { x, y, radius });
-    }
-
-    /**
-     * Checks if this bounding circle is colliding with another.
-     * @param {BoundingCircle} other
-     */
-    collide(other) {
-        let dx = this.x - other.x;
-        let dy = this.y - other.y;
-        let distance = Math.sqrt(dx * dx + dy * dy);
-        return (distance < this.radius + other.radius);
-    }
-
-    /**
-     * Displays the bounding cicle for testing purposes.
-     * @param {CanvasImageSource} game.context Canvas to draw on.
-     */
-    display(game) {
-        if (PARAMS.DEBUG) {
-            game.context.save();
-            game.context.strokeStyle = 'green';
-            game.context.lineWidth = PARAMS.BB_LINE_WIDTH;
-            game.context.beginPath();
-            game.context.arc(
-                this.x - game.camera.pos.x,
-                this.y - game.camera.pos.y,
-                this.radius, 0, 2 * Math.PI);
-            game.context.stroke();
             game.context.restore();
         }
     }

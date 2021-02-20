@@ -135,15 +135,21 @@ class GameEngine {
      * @param {Entity} entity Entity to be added to the game world.
      */
     addEntity(entity) {
+        entity.isPaused = false;
         this.entities.push(entity);
     };
 
     /** Draws all entities according to their draw functionality. */
     draw() {
-        this.context.clearRect(0, 0, this.context.canvas.width, this.context.canvas.height);
-        for (var i = 0; i < this.entities.length; i++) {
-            this.entities[i].draw(this.context);
+        if (!this.camera.isGameOver) {
+            this.context.clearRect(0, 0, this.context.canvas.width, this.context.canvas.height);
         }
+        for (var i = 0; i < this.entities.length; i++) {
+            if (!this.camera.isGameOver) {
+                this.entities[i].draw(this.context);
+            }
+        }
+        this.camera.draw(this.context);
     };
 
     /** 

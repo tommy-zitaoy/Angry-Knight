@@ -39,19 +39,6 @@ class Ground extends Entity {
 	}
 }
 
-//class Background extends Entity {
-//	constructor(game, x, y) {
-//		super(game, x, y, "./sprites/background.png");
-//		this.update = function () { /* Do nothing. */ };
-//	};
-
-//	/** @override */
-//	draw(context) {
-//		context.drawImage(this.spritesheet, 600, 0, 600, 329,
-//			this.pos.x, this.pos.y, PARAMS.CANVAS_WIDTH, PARAMS.CANVAS_HEIGHT);
-//	}
-//}
-
 // parallax background entity
 class Background extends Entity {
 	constructor(game, x, y, spriteSheetName, spriteWidth, spriteLength, speedRate) {
@@ -71,10 +58,10 @@ class Background extends Entity {
 
 	/** @override */
 	update() {
-		if (this.game.taz.vel.x > 0) {
-			this.speed = this.game.clockTick * this.speedRate;
-		} else if (this.game.taz.vel.x < 0) {
+		if (this.game.knight.vel.x > 0) {
 			this.speed = this.game.clockTick * -this.speedRate;
+		} else if (this.game.knight.vel.x < 0) {
+			this.speed = this.game.clockTick * this.speedRate;
 		} else {
 			this.speed = 0;
 		}
@@ -116,5 +103,119 @@ class Background extends Entity {
 		context.drawImage(this.spritesheet, 0, 0, this.spriteWidth, this.spriteLength,
 			this.rightImagePos.x - this.game.camera.pos.x + this.speed, this.rightImagePos.y,
 			this.dim.x, this.dim.y);
+	}
+}
+
+class Golem extends Agent {
+	constructor(game, x, y) {
+		super(game, x, y, "./sprites/jake.png");
+		this.hitWallCount = 0;
+		this.lastHit = new Ground(this.game, 0, 0, false);
+	}
+
+	/** @override */
+	draw(context) {
+		context.drawImage(this.spritesheet, 0, 0, 52, 68,
+			this.pos.x - this.game.camera.pos.x, this.pos.y - this.game.camera.pos.y,
+			this.dim.y, this.dim.y);
+		this.worldBB.display(this.game);
+	}
+
+	/** @override */
+	checkCollisions() {
+		let that = this;
+		this.game.entities.forEach(function (entity) {
+			if (entity.worldBB && that.worldBB.collide(entity.worldBB)
+				&& that !== entity) {
+				if (entity instanceof Ground) {
+					if (that.vel.y > 0) {
+						if (that.lastWorldBB.bottom <= entity.worldBB.top
+							&& (that.lastWorldBB.left) < entity.worldBB.right
+							&& (that.lastWorldBB.right) > entity.worldBB.left) { // falling dowm
+							that.pos.y = entity.worldBB.top - that.dim.y;
+							that.vel.y = -300;
+						}
+					}
+					if (that.vel.y < 0) {
+						if ((that.lastWorldBB.top) >= entity.worldBB.bottom
+							&& (that.lastWorldBB.left) != entity.worldBB.right
+							&& (that.lastWorldBB.right) != entity.worldBB.left) { // jumping up
+							that.pos.y = entity.worldBB.bottom;
+							that.vel.y = 300;
+						}
+					}
+					if (that.vel.x < 0 && (that.lastWorldBB.left) >= entity.worldBB.right
+						&& that.lastWorldBB.top < entity.worldBB.bottom
+						&& that.lastWorldBB.bottom > entity.worldBB.top) { // going left
+						that.pos.x = entity.worldBB.right;
+						that.vel.x = 300;
+					}
+					if (that.vel.x > 0 && (that.lastWorldBB.right) <= entity.worldBB.left
+						&& that.lastWorldBB.top < entity.worldBB.bottom
+						&& that.lastWorldBB.bottom > entity.worldBB.top) { // going right
+						that.pos.x = entity.worldBB.left - that.dim.x;
+						that.vel.x = -300;
+					}
+					that.hitWallCount++;
+					that.lastHit = entity;
+				}
+				if (entity instanceof MeleeAttack) {
+					if (entity.vel.x > 0) {
+						if (entity.pos.y > that.pos.y) {
+							that.vel.x += 300;
+							that.vel.y += 300;
+                        } else {
+							that.vel.x += 300;
+							that.vel.y += -300;
+						}
+						that.pos.x = entity.pos.x + PARAMS.TILE_WIDTH;
+					} else {
+						if (entity.pos.y > that.pos.y) {
+							that.vel.x += -300;
+							that.vel.y += 300;
+						} else {
+							that.vel.x += -300;
+							that.vel.y += -300;
+						}
+						that.pos.x = entity.pos.x - PARAMS.TILE_WIDTH;
+					}
+					if (that.lastHit instanceof Ground) {
+						that.game.camera.score += 100;
+						if (that.hitWallCount < 5) {
+							that.game.knight.combo++;
+							if (that.game.knight.combo > that.game.camera.highestCombo) {
+								that.game.camera.highestCombo = that.game.knight.combo;
+							}
+						} else {
+							that.game.knight.combo = 0;
+                        }
+					}
+					that.hitWallCount = 0;
+					that.lastHit = entity;
+				}
+			}
+		});
+		console.log("HitWallCount: " + this.hitWallCount);
+		console.log("LastHit: " + this.lastHit);
+		console.log("Current combo: " + this.game.knight.combo);
+
+	}
+
+	/** @override */
+	update() {
+		const TICK = this.game.clockTick;
+		this.move(TICK);
+    }
+
+	/** @override */
+	drawWorldBB(context) {
+		if (PARAMS.DEBUG) {
+			context.save();
+			context.strokeStyle = 'red';
+			context.lineWidth = PARAMS.BB_LINE_WIDTH;
+			context.strokeRect(
+				this.pos.x - this.game.camera.pos.x, this.pos.y - this.game.camera.pos.y, PARAMS.TILE_WIDTH, PARAMS.TILE_WIDTH);
+			context.restore();
+		}
 	}
 }
