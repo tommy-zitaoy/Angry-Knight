@@ -181,7 +181,7 @@ class Golem extends Agent {
 					}
 					if (that.lastHit instanceof Ground) {
 						that.game.camera.score += 100;
-						if (that.hitWallCount < 5) {
+						if (that.hitWallCount < 7) {
 							that.game.knight.combo++;
 							if (that.game.knight.combo > that.game.camera.highestCombo) {
 								that.game.camera.highestCombo = that.game.knight.combo;
